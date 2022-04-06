@@ -104,10 +104,7 @@ if __name__ == '__main__':
 	# set a 10Hz frequency for this loop
 	loop_rate = rospy.Rate(10)
 	
-	# Transform sphere parameters into base frame:
-	
-	#print("################x: {}, y: {}, z: {}, radius: {}".format(raw_x, raw_y, raw_z, radius))
-	
+	# The values for the ball are only gotten once:
 	valid = False
 	
 	while not valid:
@@ -128,7 +125,7 @@ if __name__ == '__main__':
 	r = new_coords[3]
 	
 	print("Values after transformation:")
-	print("x: {}, y: {}, z: {}, radius: {}".format(x, y, z, radius))
+	print("x: {}, y: {}, z: {}, radius: {}".format(x, y, z, r))
 	
 	# define a plan variable
 	plan = Plan()
@@ -140,7 +137,7 @@ if __name__ == '__main__':
 	add_point(plan, x, y, 0.5, 3.14, 0.0, 1.57)
 	
 	# Third point, straignt down to pick up ball:
-	add_point(plan, x, y, (-z)+r, 3.14, 0.0, 1.57)
+	add_point(plan, x, y, (z)+r, 3.14, 0.0, 1.57)
 	
 	# Fourth point, straight back up:
 	add_point(plan, x, y, 0.5, 3.14, 0.0, 1.57)
@@ -149,7 +146,7 @@ if __name__ == '__main__':
 	add_point(plan, x, -0.5, 0.5, 3.14, 0.0, 1.57)
 	
 	# Sixth point, straight down to drop ball:
-	add_point(plan, x, -0.5, (-z)+r, 3.14, 0.0, 1.57)
+	add_point(plan, x, -0.5, (z)+r, 3.14, 0.0, 1.57)
 	
 	# Seventh point, straight back up:
 	add_point(plan, x, -0.5, 0.5, 3.14, 0.0, 1.57)
