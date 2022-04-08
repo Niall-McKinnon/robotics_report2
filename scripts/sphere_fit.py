@@ -71,6 +71,9 @@ if __name__ == '__main__':
 	point_gain = 0.0005
 	radius_gain = 0.005
 	
+	# Flag variable:
+	first = True
+	
 	while not rospy.is_shutdown():
 		
 		if received:
@@ -94,15 +97,25 @@ if __name__ == '__main__':
 				zc = P[2]
 				r = math.sqrt(P[3] + xc**2 + yc**2 + zc**2)
 				
-				# Get filtered data:
-				Fxc = filter_data(xc, x_fil_out, point_gain)
-				x_fil_out = Fxc
-				Fyc = filter_data(yc, y_fil_out, point_gain)
-				y_fil_out = Fyc
-				Fzc = filter_data(zc, z_fil_out, point_gain)
-				z_fil_out = Fzc
-				Fr = filter_data(r, r_fil_out, radius_gain)
-				r_fil_out = Fr
+				# If this is the first time data is received, do not filter:
+				if first:
+					x_fil_out = xc
+					y_fil_out = yc
+					z_fil_out = zc
+					r_fil_out = r
+					
+					first = False
+					
+				else:
+					# Get filtered data:
+					xc = filter_data(xc, x_fil_out, point_gain)
+					x_fil_out = xc
+					yc = filter_data(yc, y_fil_out, point_gain)
+					y_fil_out = yc
+					zc = filter_data(zc, z_fil_out, point_gain)
+					z_fil_out = zc
+					r = filter_data(r, r_fil_out, radius_gain)
+					r_fil_out = r
 				
 				# This was for the seperate filtered data publisher
 				# I have kept it commented here for ease of access later in case I need to access both datasets
@@ -118,10 +131,10 @@ if __name__ == '__main__':
 				sphere_data = SphereParams()
 				
 				# Add sphere params to publisher:
-				sphere_data.xc = Fxc
-				sphere_data.yc = Fyc
-				sphere_data.zc = Fzc
-				sphere_data.radius = Fr
+				sphere_data.xc = xc
+				sphere_data.yc = yc
+				sphere_data.zc = zc
+				sphere_data.radius = r
 				
 				# Publish messge:
 				sphere_pub.publish(sphere_data)

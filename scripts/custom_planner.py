@@ -91,6 +91,20 @@ def add_point(plan, linX, linY, linZ, anX, anY, anZ):
 		plan_point.angular.z = anZ
 		
 		plan.points.append(plan_point)
+		
+
+# Callback function for getting current robot position:
+
+current_pos = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+def get_current_pos(data):
+	global current_pos
+	
+	current_pos[0] = data.linear.x
+	current_pos[1] = data.linear.y
+	current_pos[2] = data.linear.z
+	current_pos[3] = data.angular.x
+	current_pos[4] = data.angular.y
+	current_pos[5] = data.angular.z
 
 if __name__ == '__main__':
 	# initialize the node
@@ -98,6 +112,9 @@ if __name__ == '__main__':
 	
 	# Add a subscriber for the sphere parameters:
 	rospy.Subscriber('sphere_params', SphereParams, get_sphere_data)
+	
+	# Add a subscriber for the robot's curent position:
+	rospy.Subscriber('/ur5e/toolpose', Twist, get_current_pos)
 	
 	# add a publisher for sending joint position commands
 	plan_pub = rospy.Publisher('/plan', Plan, queue_size = 10)
@@ -111,7 +128,7 @@ if __name__ == '__main__':
 	
 		if 0 not in [raw_x, raw_y, raw_z, radius]:
 			valid = True
-		
+			
 		# Conduct transformation:
 		new_coords = transform_coords(raw_x, raw_y, raw_z, radius)
 	
@@ -126,6 +143,8 @@ if __name__ == '__main__':
 	
 	print("Values after transformation:")
 	print("x: {}, y: {}, z: {}, radius: {}".format(x, y, z, r))
+	
+	
 	
 	# define a plan variable
 	plan = Plan()
@@ -142,14 +161,11 @@ if __name__ == '__main__':
 	# Fourth point, straight back up:
 	add_point(plan, x, y, 0.5, 3.14, 0.0, 1.57)
 	
-	# Fifth point, translate along y axis:
-	add_point(plan, x, -0.5, 0.5, 3.14, 0.0, 1.57)
+	# Fifth point, back to starting pos:
+	add_point(plan, -0.5, -0.133, 0.5, 3.14, 0.0, 1.57)
 	
 	# Sixth point, straight down to drop ball:
-	add_point(plan, x, -0.5, (z)+r, 3.14, 0.0, 1.57)
-	
-	# Seventh point, straight back up:
-	add_point(plan, x, -0.5, 0.5, 3.14, 0.0, 1.57)
+	add_point(plan, -0.5, -0.133, (z)+r, 3.14, 0.0, 1.57)
 
 	while not rospy.is_shutdown():
 		
