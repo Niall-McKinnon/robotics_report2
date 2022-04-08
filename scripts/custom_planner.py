@@ -121,12 +121,11 @@ if __name__ == '__main__':
 	# set a 10Hz frequency for this loop
 	loop_rate = rospy.Rate(10)
 	
-	# The values for the ball are only gotten once:
+	# The values for the ball are only gotten once, preventing jumps in ball estimation:
 	valid = False
-	
 	while not valid:
 	
-		if 0 not in [raw_x, raw_y, raw_z, radius]:
+		if 0 not in [raw_x, raw_y, raw_z, radius]: # Ensures that the results are satisfactory before building plan
 			valid = True
 			
 		# Conduct transformation:
@@ -144,35 +143,47 @@ if __name__ == '__main__':
 	print("Values after transformation:")
 	print("x: {}, y: {}, z: {}, radius: {}".format(x, y, z, r))
 	
-	
+	# Plan variable for moving from current position to start position:
+	#initialize = Plan()
+	#add_point(initialize, current_pos[0], current_pos[1], current_pos[2], current_pos[3], current_pos[4], current_pos[5])
+	#add_point(initialize, -0.5, -0.133, 0.5, 3.14, 0.0, 1.57)
 	
 	# define a plan variable
-	plan = Plan()
+	motion = Plan()
 	
 	# First point, initial position:
-	add_point(plan, -0.5, -0.133, 0.5, 3.14, 0.0, 1.57)
+	# add_point(motion, -0.5, -0.133, 0.5, 3.14, 0.0, 1.57)
+	add_point(motion, current_pos[0], current_pos[1], current_pos[2], current_pos[3], current_pos[4], current_pos[5])
 	
 	# Second point, directly over ball:
-	add_point(plan, x, y, 0.5, 3.14, 0.0, 1.57)
+	add_point(motion, x, y, 0.5, 3.14, 0.0, 1.57)
 	
 	# Third point, straignt down to pick up ball:
-	add_point(plan, x, y, (z)+r, 3.14, 0.0, 1.57)
+	add_point(motion, x, y, (z)+r, 3.14, 0.0, 1.57)
 	
 	# Fourth point, straight back up:
-	add_point(plan, x, y, 0.5, 3.14, 0.0, 1.57)
+	add_point(motion, x, y, 0.5, 3.14, 0.0, 1.57)
 	
 	# Fifth point, back to starting pos:
-	add_point(plan, -0.5, -0.133, 0.5, 3.14, 0.0, 1.57)
+	add_point(motion, -0.5, -0.133, 0.5, 3.14, 0.0, 1.57)
 	
 	# Sixth point, straight down to drop ball:
-	add_point(plan, -0.5, -0.133, (z)+r, 3.14, 0.0, 1.57)
+	add_point(motion, -0.5, -0.133, (z)+r, 3.14, 0.0, 1.57)
+	
+	# initialized = False
 
 	while not rospy.is_shutdown():
+		#if not initialized:
+		#	plan = initialize
+		#	initialized = True
+		#else:
+		#	plan = motion
+		plan = motion
 		
 		# publish the plan
 		plan_pub.publish(plan)
 		# wait for 0.1 seconds until the next loop and repeat
 		loop_rate.sleep()
-		
+			
 		
 	
