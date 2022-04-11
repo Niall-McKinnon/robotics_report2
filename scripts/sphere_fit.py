@@ -61,11 +61,11 @@ if __name__ == '__main__':
 	# Set loop frequency:
 	rate = rospy.Rate(10)
 	
-	# Set initial variables for filter equation:
-	x_fil_out = -0.015
-	y_fil_out = -0.019
-	z_fil_out = 0.48
-	r_fil_out = 0.06
+	# Initialize variables for filter equation:
+	x_fil_out = 0.0
+	y_fil_out = 0.0
+	z_fil_out = 0.0
+	r_fil_out = 0.0
 	
 	# Gains are easily adjustable:
 	point_gain = 0.0005
@@ -103,7 +103,7 @@ if __name__ == '__main__':
 					y_fil_out = yc
 					z_fil_out = zc
 					r_fil_out = r
-					
+					# The first filter input is set to the initial coordinates
 					first = False
 					
 				else:

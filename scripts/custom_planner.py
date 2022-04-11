@@ -6,6 +6,7 @@ import math
 # import the plan message
 from ur5e_control.msg import Plan
 from geometry_msgs.msg import Twist
+from std_msgs.msg import Bool
 
 # Import Sphere Parameters
 from robot_vision_lectures.msg import SphereParams
@@ -91,7 +92,7 @@ def add_point(plan, linX, linY, linZ, anX, anY, anZ):
 		plan_point.angular.z = anZ
 		
 		plan.points.append(plan_point)
-		
+		# plan.del
 
 # Callback function for getting current robot position:
 
@@ -106,6 +107,11 @@ def get_current_pos(data):
 	current_pos[4] = data.angular.y
 	current_pos[5] = data.angular.z
 
+start = False
+def get_bool(data):
+	global start
+	start = data.data
+
 if __name__ == '__main__':
 	# initialize the node
 	rospy.init_node('custom_planner', anonymous = True)
@@ -116,6 +122,9 @@ if __name__ == '__main__':
 	# Add a subscriber for the robot's curent position:
 	rospy.Subscriber('/ur5e/toolpose', Twist, get_current_pos)
 	
+	# Add a subscriber for boolean value:
+	rospy.Subscriber('/PauseTracker', Bool, get_bool)
+	
 	# add a publisher for sending joint position commands
 	plan_pub = rospy.Publisher('/plan', Plan, queue_size = 10)
 	# set a 10Hz frequency for this loop
@@ -123,15 +132,16 @@ if __name__ == '__main__':
 	
 	# The values for the ball are only gotten once, preventing jumps in ball estimation:
 	valid = False
-	while not valid:
+	while not valid: # Add boolean check in here!
 	
 		if 0 not in [raw_x, raw_y, raw_z, radius]: # Ensures that the results are satisfactory before building plan
 			valid = True
 			
 		# Conduct transformation:
 		new_coords = transform_coords(raw_x, raw_y, raw_z, radius)
+		
 	
-	print("Values before transformation:")
+	print("Ball values before transformation:")
 	print("x: {}, y: {}, z: {}, radius: {}".format(raw_x, raw_y, raw_z, radius))
 	
 	# Define transformed coordinates:
@@ -140,7 +150,7 @@ if __name__ == '__main__':
 	z = new_coords[2]
 	r = new_coords[3]
 	
-	print("Values after transformation:")
+	print("Ball values after transformation:")
 	print("x: {}, y: {}, z: {}, radius: {}".format(x, y, z, r))
 	
 	# Plan variable for moving from current position to start position:
@@ -164,7 +174,7 @@ if __name__ == '__main__':
 	# Fourth point, straight back up:
 	add_point(motion, x, y, 0.5, 3.14, 0.0, 1.57)
 	
-	# Fifth point, back to starting pos:
+	# Fifth point, above drop point:
 	add_point(motion, -0.5, -0.133, 0.5, 3.14, 0.0, 1.57)
 	
 	# Sixth point, straight down to drop ball:
@@ -179,6 +189,7 @@ if __name__ == '__main__':
 		#else:
 		#	plan = motion
 		plan = motion
+		# print("Bool: ", start)
 		
 		# publish the plan
 		plan_pub.publish(plan)
