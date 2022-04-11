@@ -92,7 +92,7 @@ def add_point(plan, linX, linY, linZ, anX, anY, anZ):
 		plan_point.angular.z = anZ
 		
 		plan.points.append(plan_point)
-		# plan.del
+		
 
 # Callback function for getting current robot position:
 
@@ -107,10 +107,11 @@ def get_current_pos(data):
 	current_pos[4] = data.angular.y
 	current_pos[5] = data.angular.z
 
-start = False
+# Callback function for enabling/disabling ball tracking:
+tracking = False
 def get_bool(data):
-	global start
-	start = data.data
+	global tracking
+	tracking = data.data
 
 if __name__ == '__main__':
 	# initialize the node
@@ -123,78 +124,83 @@ if __name__ == '__main__':
 	rospy.Subscriber('/ur5e/toolpose', Twist, get_current_pos)
 	
 	# Add a subscriber for boolean value:
-	rospy.Subscriber('/PauseTracker', Bool, get_bool)
+	rospy.Subscriber('/TrackBall', Bool, get_bool)
 	
 	# add a publisher for sending joint position commands
 	plan_pub = rospy.Publisher('/plan', Plan, queue_size = 10)
 	# set a 10Hz frequency for this loop
 	loop_rate = rospy.Rate(10)
 	
-	# The values for the ball are only gotten once, preventing jumps in ball estimation:
-	valid = False
-	while not valid: # Add boolean check in here!
-	
-		if 0 not in [raw_x, raw_y, raw_z, radius]: # Ensures that the results are satisfactory before building plan
-			valid = True
-			
-		# Conduct transformation:
-		new_coords = transform_coords(raw_x, raw_y, raw_z, radius)
-		
-	
-	print("Ball values before transformation:")
-	print("x: {}, y: {}, z: {}, radius: {}".format(raw_x, raw_y, raw_z, radius))
-	
-	# Define transformed coordinates:
-	x = new_coords[0]
-	y = new_coords[1]
-	z = new_coords[2]
-	r = new_coords[3]
-	
-	print("Ball values after transformation:")
-	print("x: {}, y: {}, z: {}, radius: {}".format(x, y, z, r))
-	
-	# Plan variable for moving from current position to start position:
-	#initialize = Plan()
-	#add_point(initialize, current_pos[0], current_pos[1], current_pos[2], current_pos[3], current_pos[4], current_pos[5])
-	#add_point(initialize, -0.5, -0.133, 0.5, 3.14, 0.0, 1.57)
-	
-	# define a plan variable
-	motion = Plan()
-	
-	# First point, initial position:
-	# add_point(motion, -0.5, -0.133, 0.5, 3.14, 0.0, 1.57)
-	add_point(motion, current_pos[0], current_pos[1], current_pos[2], current_pos[3], current_pos[4], current_pos[5])
-	
-	# Second point, directly over ball:
-	add_point(motion, x, y, 0.5, 3.14, 0.0, 1.57)
-	
-	# Third point, straignt down to pick up ball:
-	add_point(motion, x, y, (z)+r, 3.14, 0.0, 1.57)
-	
-	# Fourth point, straight back up:
-	add_point(motion, x, y, 0.5, 3.14, 0.0, 1.57)
-	
-	# Fifth point, above drop point:
-	add_point(motion, -0.5, -0.133, 0.5, 3.14, 0.0, 1.57)
-	
-	# Sixth point, straight down to drop ball:
-	add_point(motion, -0.5, -0.133, (z)+r, 3.14, 0.0, 1.57)
-	
-	# initialized = False
-
+	delay = 0
 	while not rospy.is_shutdown():
-		#if not initialized:
-		#	plan = initialize
-		#	initialized = True
-		#else:
-		#	plan = motion
-		plan = motion
-		# print("Bool: ", start)
-		
-		# publish the plan
-		plan_pub.publish(plan)
-		# wait for 0.1 seconds until the next loop and repeat
-		loop_rate.sleep()
+	
+		if tracking: # Check to make sure tracking is enabled
+		# Each time tracking is re-enabled, a new plan is defined with updated starting position and ball position
 			
+			print("---\nGenerating new plan...")
+			
+			valid = False
+			while not valid:
+			
+				if 0 not in [raw_x, raw_y, raw_z, radius]: # Ensures that the results are satisfactory before building plan
+					valid = True
+					
+				# Conduct transformation:
+				new_coords = transform_coords(raw_x, raw_y, raw_z, radius)
+						
+			
+			print("---\nBall values before transformation:")
+			print("x: {}, y: {}, z: {}, radius: {}".format(raw_x, raw_y, raw_z, radius))
+			
+			# Define transformed coordinates:
+			x = new_coords[0]
+			y = new_coords[1]
+			z = new_coords[2]
+			r = new_coords[3]
+			
+			print("Ball values after transformation:")
+			print("x: {}, y: {}, z: {}, radius: {}".format(x, y, z, r))
+			print("---\nInitializing motion...")
+			
+			motion = Plan() # New plan
+			
+			# First point, initial position:
+			add_point(motion, current_pos[0], current_pos[1], current_pos[2], current_pos[3], current_pos[4], current_pos[5])
+			
+			# Second point, directly over ball:
+			add_point(motion, x, y, 0.5, 3.14, 0.0, 1.57)
+			
+			# Third point, straignt down to pick up ball:
+			add_point(motion, x, y, (z)+r, 3.14, 0.0, 1.57)
+			
+			# Fourth point, straight back up:
+			add_point(motion, x, y, 0.5, 3.14, 0.0, 1.57)
+			
+			# Fifth point, above drop point:
+			add_point(motion, -0.5, -0.133, 0.5, 3.14, 0.0, 1.57)
+			
+			# Sixth point, straight down to drop ball:
+			add_point(motion, -0.5, -0.133, (z)+r, 3.14, 0.0, 1.57)
+			
+			# Seventh point, back up:
+			add_point(motion, -0.5, -0.133, 0.5, 3.14, 0.0, 1.57)
+			
+			while tracking: # This will stop publishing the plan when tracking is disabled
+				
+				# publish the plan
+				plan_pub.publish(motion)
+			
+				# wait for 0.1 seconds until the next loop and repeat
+				
+				loop_rate.sleep()
+		
+		else: # Print a message to the user if tracking is not enabled:
+	
+			if delay == 0:
+				print("---\nBall tracking not enabled. Change topic \'/TrackBall\' (type std_msgs/Bool) in rqt_gui.")
+				delay = 10
+			else:
+				delay -= 1 # Less overwhelming stream of messages
+				loop_rate.sleep()
 		
 	
