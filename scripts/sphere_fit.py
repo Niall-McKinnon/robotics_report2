@@ -4,6 +4,7 @@ import rospy
 import numpy as np
 from robot_vision_lectures.msg import XYZarray
 from robot_vision_lectures.msg import SphereParams
+from std_msgs.msg import Bool
 
 # Define global variables, these are used to build A and B matricies:
 b_data = []
@@ -43,6 +44,11 @@ def filter_data(data, fil_out, fil_gain):
 	
 	return fil_out
 
+# Callback for boolean switch:
+tracking = False
+def track_bool(data):
+	global tracking
+	tracking = data.data
 
 if __name__ == '__main__':
 	
@@ -51,6 +57,9 @@ if __name__ == '__main__':
 	
 	# Add a subscriber for the XYZ data:
 	sphere_data = rospy.Subscriber('xyz_cropped_ball', XYZarray, get_ball_data)
+	
+	# Add a subscriber for boolean value:
+	rospy.Subscriber('/TrackBall', Bool, track_bool)
 	
 	# Define publisher:
 	sphere_pub = rospy.Publisher('/sphere_params', SphereParams, queue_size = 1)
@@ -61,80 +70,90 @@ if __name__ == '__main__':
 	# Set loop frequency:
 	rate = rospy.Rate(10)
 	
-	# Initialize variables for filter equation:
-	x_fil_out = 0.0
-	y_fil_out = 0.0
-	z_fil_out = 0.0
-	r_fil_out = 0.0
-	
-	# Gains are easily adjustable:
-	point_gain = 0.0005
-	radius_gain = 0.005
-	
-	# Flag variable:
-	first = True
-	
+	delay = 0
 	while not rospy.is_shutdown():
-		
-		if received:
+		if tracking:
+	
+			# Initialize variables for filter equation:
+			x_fil_out = 0.0
+			y_fil_out = 0.0
+			z_fil_out = 0.0
+			r_fil_out = 0.0
 			
+			# Gains are easily adjustable:
+			point_gain = 0.0005
+			radius_gain = 0.005
 			
-			# Define the A matrix:
-			A = np.array(a_data)
-			
-			# Define the B matrix:
-			B = np.array([b_data]).T
-			
-			# Check validity of data to avoid errors:
-			if A.shape[0] == B.shape[0] and len(A.shape) == 2 and len(B.shape) == 2:
-			
-				# Calculate P:
-				P = np.linalg.lstsq(A, B, rcond=None)[0]
-			
-				# Get sphere params from P:
-				xc = P[0]
-				yc = P[1]
-				zc = P[2]
-				r = math.sqrt(P[3] + xc**2 + yc**2 + zc**2)
+			# Flag variable:
+			first = True
+			while tracking:
 				
-				# If this is the first time data is received, do not filter:
-				if first:
-					x_fil_out = xc
-					y_fil_out = yc
-					z_fil_out = zc
-					r_fil_out = r
-					# The first filter input is set to the initial coordinates
-					first = False
+				if received:
 					
-				else:
-					# Get filtered data:
-					xc = filter_data(xc, x_fil_out, point_gain)
-					x_fil_out = xc
-					yc = filter_data(yc, y_fil_out, point_gain)
-					y_fil_out = yc
-					zc = filter_data(zc, z_fil_out, point_gain)
-					z_fil_out = zc
-					r = filter_data(r, r_fil_out, radius_gain)
-					r_fil_out = r
+					# Define the A matrix:
+					A = np.array(a_data)
+					
+					# Define the B matrix:
+					B = np.array([b_data]).T
+					
+					# Check validity of data to avoid errors:
+					if A.shape[0] == B.shape[0] and len(A.shape) == 2 and len(B.shape) == 2:
+					
+						# Calculate P:
+						P = np.linalg.lstsq(A, B, rcond=None)[0]
+					
+						# Get sphere params from P:
+						xc = P[0]
+						yc = P[1]
+						zc = P[2]
+						r = math.sqrt(P[3] + xc**2 + yc**2 + zc**2)
+						
+						# If this is the first time data is received, do not filter:
+						if first:
+							x_fil_out = xc
+							y_fil_out = yc
+							z_fil_out = zc
+							r_fil_out = r
+							# The first filter input is set to the initial coordinates
+							first = False
+							
+						else:
+							# Get filtered data:
+							xc = filter_data(xc, x_fil_out, point_gain)
+							x_fil_out = xc
+							yc = filter_data(yc, y_fil_out, point_gain)
+							y_fil_out = yc
+							zc = filter_data(zc, z_fil_out, point_gain)
+							z_fil_out = zc
+							r = filter_data(r, r_fil_out, radius_gain)
+							r_fil_out = r
+						
+						# This was for the seperate filtered data publisher
+						# I have kept it commented here for ease of access later in case I need to access both datasets
+						
+						#filtered_data = SphereParams()
+						#filtered_data.xc = Fxc
+						#filtered_data.yc = Fyc
+						#filtered_data.zc = Fzc
+						#filtered_data.radius = Fr
+						#filter_pub.publish(filtered_data)
+						
+						# Declare variable for publisher:
+						sphere_data = SphereParams()
+						
+						# Add sphere params to publisher:
+						sphere_data.xc = xc
+						sphere_data.yc = yc
+						sphere_data.zc = zc
+						sphere_data.radius = r
+						
+						# Publish messge:
+						sphere_pub.publish(sphere_data)
+		else:
+			if delay == 0:
+				print("---\nBall tracking not enabled. Change topic \'/TrackBall\' (type std_msgs/Bool) in rqt_gui.")
+				delay = 10
+			else:
+				delay -= 1 # Less overwhelming stream of messages
+				rate.sleep()
 				
-				# This was for the seperate filtered data publisher
-				# I have kept it commented here for ease of access later in case I need to access both datasets
-				
-				#filtered_data = SphereParams()
-				#filtered_data.xc = Fxc
-				#filtered_data.yc = Fyc
-				#filtered_data.zc = Fzc
-				#filtered_data.radius = Fr
-				#filter_pub.publish(filtered_data)
-				
-				# Declare variable for publisher:
-				sphere_data = SphereParams()
-				
-				# Add sphere params to publisher:
-				sphere_data.xc = xc
-				sphere_data.yc = yc
-				sphere_data.zc = zc
-				sphere_data.radius = r
-				
-				# Publish messge:
-				sphere_pub.publish(sphere_data)

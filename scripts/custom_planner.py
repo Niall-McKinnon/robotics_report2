@@ -107,9 +107,15 @@ def get_current_pos(data):
 	current_pos[4] = data.angular.y
 	current_pos[5] = data.angular.z
 
-# Callback function for enabling/disabling ball tracking:
+# Callback function for enabling/disabling ball planning:
+planning = False
+def plan_bool(data):
+	global planning
+	planning = data.data
+
+# Callback function to check if the ball is being tracked:
 tracking = False
-def get_bool(data):
+def track_bool(data):
 	global tracking
 	tracking = data.data
 
@@ -124,7 +130,10 @@ if __name__ == '__main__':
 	rospy.Subscriber('/ur5e/toolpose', Twist, get_current_pos)
 	
 	# Add a subscriber for boolean value:
-	rospy.Subscriber('/TrackBall', Bool, get_bool)
+	rospy.Subscriber('/BallPlan', Bool, plan_bool)
+	
+	# Add a subscriber for boolean value:
+	rospy.Subscriber('/TrackBall', Bool, track_bool)
 	
 	# add a publisher for sending joint position commands
 	plan_pub = rospy.Publisher('/plan', Plan, queue_size = 10)
@@ -134,7 +143,7 @@ if __name__ == '__main__':
 	delay = 0
 	while not rospy.is_shutdown():
 	
-		if tracking: # Check to make sure tracking is enabled
+		if planning and tracking: # Check to make sure tracking and planning are enabled
 		# Each time tracking is re-enabled, a new plan is defined with updated starting position and ball position
 			
 			print("---\nGenerating new plan...")
@@ -185,7 +194,7 @@ if __name__ == '__main__':
 			# Seventh point, back up:
 			add_point(motion, -0.5, -0.133, 0.5, 3.14, 0.0, 1.57)
 			
-			while tracking: # This will stop publishing the plan when tracking is disabled
+			while planning: # This will stop publishing the plan when tracking is disabled
 				
 				# publish the plan
 				plan_pub.publish(motion)
@@ -197,7 +206,10 @@ if __name__ == '__main__':
 		else: # Print a message to the user if tracking is not enabled:
 	
 			if delay == 0:
-				print("---\nBall tracking not enabled. Change topic \'/TrackBall\' (type std_msgs/Bool) in rqt_gui.")
+				if not planning:
+					print("---\nMotion Planning not enabled. Change topic \'/BallPlan\' (type std_msgs/Bool) in rqt_gui.")
+				if not tracking:
+					print("---\nBall tracking not enabled. Change topic \'/TrackBall\' (type std_msgs/Bool) in rqt_gui.")
 				delay = 10
 			else:
 				delay -= 1 # Less overwhelming stream of messages
