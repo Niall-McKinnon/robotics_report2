@@ -177,22 +177,22 @@ if __name__ == '__main__':
 			add_point(motion, current_pos[0], current_pos[1], current_pos[2], current_pos[3], current_pos[4], current_pos[5])
 			
 			# Second point, directly over ball:
-			add_point(motion, x, y, 0.5, 3.14, 0.0, 1.57)
+			add_point(motion, x, y, 0.3, current_pos[3], current_pos[4], current_pos[5])
 			
 			# Third point, straignt down to pick up ball:
-			add_point(motion, x, y, (z)+r, 3.14, 0.0, 1.57)
+			add_point(motion, x, y, (z)+r, current_pos[3], current_pos[4], current_pos[5])
 			
 			# Fourth point, straight back up:
-			add_point(motion, x, y, 0.5, 3.14, 0.0, 1.57)
+			add_point(motion, x, y, 0.3, current_pos[3], current_pos[4], current_pos[5])
 			
 			# Fifth point, above drop point:
-			add_point(motion, -0.5, -0.133, 0.5, 3.14, 0.0, 1.57)
+			add_point(motion, 0.3, -0.35, 0.3, current_pos[3], current_pos[4], current_pos[5])
 			
 			# Sixth point, straight down to drop ball:
-			add_point(motion, -0.5, -0.133, (z)+r, 3.14, 0.0, 1.57)
+			add_point(motion, 0.3, -0.35, (z)+r, current_pos[3], current_pos[4], current_pos[5])
 			
 			# Seventh point, back up:
-			add_point(motion, -0.5, -0.133, 0.5, 3.14, 0.0, 1.57)
+			add_point(motion, 0.3, -0.35, 0.3, current_pos[3], current_pos[4], current_pos[5])
 			
 			while planning: # This will stop publishing the plan when tracking is disabled
 				
