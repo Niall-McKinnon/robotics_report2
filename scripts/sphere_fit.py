@@ -45,7 +45,7 @@ def filter_data(data, fil_out, fil_gain):
 	return fil_out
 
 # Callback for boolean switch:
-tracking = False
+tracking = None
 def track_bool(data):
 	global tracking
 	tracking = data.data
@@ -70,90 +70,93 @@ if __name__ == '__main__':
 	# Set loop frequency:
 	rate = rospy.Rate(10)
 	
-	delay = 0
-	while not rospy.is_shutdown():
-		if tracking:
+	# Initialize variables for filter equation:
+	x_fil_out = 0.0
+	y_fil_out = 0.0
+	z_fil_out = 0.0
+	r_fil_out = 0.0
 	
-			# Initialize variables for filter equation:
-			x_fil_out = 0.0
-			y_fil_out = 0.0
-			z_fil_out = 0.0
-			r_fil_out = 0.0
+	# Gains are easily adjustable:
+	point_gain = 0.0005
+	radius_gain = 0.005
+	
+	delay = 0
+	first = True
+	off_print = True
+	while not rospy.is_shutdown():
+		# if tracking:
+
+		if received: # if tracking:
 			
-			# Gains are easily adjustable:
-			point_gain = 0.0005
-			radius_gain = 0.005
+			# Define the A matrix:
+			A = np.array(a_data)
 			
-			# Flag variable:
-			first = True
-			while tracking:
+			# Define the B matrix:
+			B = np.array([b_data]).T
+			
+			# Check validity of data to avoid errors:
+			if A.shape[0] == B.shape[0] and len(A.shape) == 2 and len(B.shape) == 2:
+			
+				# Calculate P:
+				P = np.linalg.lstsq(A, B, rcond=None)[0]
+			
+				# Get sphere params from P:
+				xc = P[0]
+				yc = P[1]
+				zc = P[2]
+				r = math.sqrt(P[3] + xc**2 + yc**2 + zc**2)
 				
-				if received:
-					
-					# Define the A matrix:
-					A = np.array(a_data)
-					
-					# Define the B matrix:
-					B = np.array([b_data]).T
-					
-					# Check validity of data to avoid errors:
-					if A.shape[0] == B.shape[0] and len(A.shape) == 2 and len(B.shape) == 2:
-					
-						# Calculate P:
-						P = np.linalg.lstsq(A, B, rcond=None)[0]
-					
-						# Get sphere params from P:
-						xc = P[0]
-						yc = P[1]
-						zc = P[2]
-						r = math.sqrt(P[3] + xc**2 + yc**2 + zc**2)
+				if tracking: # If tracking is enabled, filter the data
+				
+					off_print = True  # This is a simple flag used for printing a message if the filter is disabled
+				
+					# If this is the first time data is received, do not filter:
+					if first:
+						x_fil_out = xc
+						y_fil_out = yc
+						z_fil_out = zc
+						r_fil_out = r
 						
-						# If this is the first time data is received, do not filter:
-						if first:
-							x_fil_out = xc
-							y_fil_out = yc
-							z_fil_out = zc
-							r_fil_out = r
-							# The first filter input is set to the initial coordinates
-							first = False
-							
-						else:
-							# Get filtered data:
-							xc = filter_data(xc, x_fil_out, point_gain)
-							x_fil_out = xc
-							yc = filter_data(yc, y_fil_out, point_gain)
-							y_fil_out = yc
-							zc = filter_data(zc, z_fil_out, point_gain)
-							z_fil_out = zc
-							r = filter_data(r, r_fil_out, radius_gain)
-							r_fil_out = r
+						print("---\nBall Filter is ENABLED.")
+						# The first filter input is set to the initial coordinates
+						first = False
 						
-						# This was for the seperate filtered data publisher
-						# I have kept it commented here for ease of access later in case I need to access both datasets
+					else:
+						# Get filtered data:
+						xc = filter_data(xc, x_fil_out, point_gain)
+						x_fil_out = xc
+						yc = filter_data(yc, y_fil_out, point_gain)
+						y_fil_out = yc
+						zc = filter_data(zc, z_fil_out, point_gain)
+						z_fil_out = zc
+						r = filter_data(r, r_fil_out, radius_gain)
+						r_fil_out = r
 						
-						#filtered_data = SphereParams()
-						#filtered_data.xc = Fxc
-						#filtered_data.yc = Fyc
-						#filtered_data.zc = Fzc
-						#filtered_data.radius = Fr
-						#filter_pub.publish(filtered_data)
-						
-						# Declare variable for publisher:
-						sphere_data = SphereParams()
-						
-						# Add sphere params to publisher:
-						sphere_data.xc = xc
-						sphere_data.yc = yc
-						sphere_data.zc = zc
-						sphere_data.radius = r
-						
-						# Publish messge:
-						sphere_pub.publish(sphere_data)
-		else:
-			if delay == 0:
-				print("---\nBall tracking not enabled. Change topic \'/TrackBall\' (type std_msgs/Bool) in rqt_gui.")
-				delay = 10
-			else:
-				delay -= 1 # Less overwhelming stream of messages
-				rate.sleep()
+				else:
+					if off_print:
+						print("---\nBall filter is DISABLED.")
+						off_print = False
+					first = True  # Reset first to True for when filter is re-initialized
+				
+				# This was for the seperate filtered data publisher
+				# I have kept it commented here for ease of access later in case I need to access both datasets
+				
+				#filtered_data = SphereParams()
+				#filtered_data.xc = Fxc
+				#filtered_data.yc = Fyc
+				#filtered_data.zc = Fzc
+				#filtered_data.radius = Fr
+				#filter_pub.publish(filtered_data)
+				
+				# Declare variable for publisher:
+				sphere_data = SphereParams()
+				
+				# Add sphere params to publisher:
+				sphere_data.xc = xc
+				sphere_data.yc = yc
+				sphere_data.zc = zc
+				sphere_data.radius = r
+				
+				# Publish messge:
+				sphere_pub.publish(sphere_data)
 				

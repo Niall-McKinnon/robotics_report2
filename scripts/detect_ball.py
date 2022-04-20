@@ -41,8 +41,11 @@ if __name__ == '__main__':
 			hsv = cv2.cvtColor(rgb_img, cv2.COLOR_RGB2HSV)
 			
 			# Define ranges of the mask:
-			lower_yellow_hsv = np.array([20,10,1])
-			upper_yellow_hsv = np.array([60,255,255])
+			#lower_yellow_hsv = np.array([20,10,1])
+			#upper_yellow_hsv = np.array([60,255,255])
+			
+			lower_yellow_hsv = np.array([0,80,230])
+			upper_yellow_hsv = np.array([40,255,255])
 			
 			# Use mask to filter the image:
 			mask = cv2.inRange(hsv, lower_yellow_hsv, upper_yellow_hsv)
@@ -63,12 +66,10 @@ if __name__ == '__main__':
 					# Center Point:
 					center = (i[0], i[1])
 					cv2.circle(rgb_img, center, 1, (0, 100, 100), 3)
-					# cv2.circle(mask, center, 1, (0, 100, 100), 10)
 					
 					# Outline:
 					radius = i[2]
 					cv2.circle(rgb_img, center, radius, (255, 0, 0), 3)
-					# cv2.circle(mask, center, radius, (255, 0, 0), 3)
 			
 			# Crop image mask to remove accidental detection:
 			blank_img = np.zeros((720, 1280, 1), dtype = "uint8")
